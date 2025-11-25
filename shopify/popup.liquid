@@ -1,0 +1,289 @@
+<!-- snippets/freight-form.liquid: Mobile-friendly footer + validation -->
+
+<style>
+:root{
+  --accent:#e30; --text:#111; --bg:#fff; --border:#e1e1e1;
+  --radius:14px; --shadow:0 12px 40px rgba(0,0,0,0.25); --font:"Inter", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* BACKDROP & MODAL (base) */
+#freight-popup-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999;
+  align-items:center; justify-content:center; backdrop-filter:blur(3px); padding:20px; }
+#freight-popup-backdrop.show{ display:flex; }
+
+#freight-popup{
+  background:var(--bg); border-radius:var(--radius); box-shadow:var(--shadow);
+  width:100%; max-width:560px; overflow:hidden; max-height:90vh;
+  display:flex; flex-direction:column; font-family:var(--font);
+  animation:popIn .25s ease; position:relative;
+}
+@keyframes popIn{ from{opacity:0; transform:scale(.97);} to{opacity:1; transform:none;} }
+
+/* HEADER */
+#freight-popup-header{ padding:18px 24px; border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center; }
+#freight-popup-header h3{ margin:0; font-size:20px; font-weight:600; }
+#freight-popup-header button{ background:none; border:none; font-size:26px; cursor:pointer; color:#666; }
+
+/* SUCCESS BAR TOP */
+#freight-success-bar{ display:none; background:#e8f7ec; color:#1f7a3a;
+  padding:14px 20px; border-bottom:1px solid #bfe5c7; font-weight:600; text-align:center;
+  animation:fadeSlide .35s ease; }
+@keyframes fadeSlide{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:none;} }
+
+/* BODY */
+#freight-popup-body{ padding:20px 24px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+/* PRODUCT */
+.freight-product{ display:flex; gap:12px; margin-bottom:16px; align-items:center; }
+.freight-product img{ width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid var(--border); }
+
+/* FIELDS */
+#freight-popup label{ font-size:14px; font-weight:600; margin-top:14px; display:block; }
+#freight-popup input, #freight-popup textarea{
+  width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:8px;
+  font-size:15px; margin-top:5px; background:#fafafa; box-sizing:border-box;
+}
+#freight-popup input:focus, #freight-popup textarea:focus{
+  outline:none; border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(227,48,48,0.18);
+}
+
+/* INLINE ERROR */
+.freight-error{ color:#d62828; font-size:13px; margin-top:4px; display:none; font-weight:500; }
+input.error, textarea.error{ border-color:#d62828 !important; background:#fff3f3 !important; }
+
+/* FOOTER (desktop) */
+#freight-popup-footer{ padding:16px 24px; border-top:1px solid var(--border);
+  display:flex; gap:12px; justify-content:flex-end; background:transparent; position:sticky; bottom:0; }
+#freight-popup-footer .btn{ padding:10px 20px; border-radius:8px; cursor:pointer; font-size:15px; border:none; font-weight:600; }
+.btn-cancel{ background:#eee; color:#333; } .btn-primary{ background:var(--accent); color:#fff; box-shadow:0 3px 6px rgba(227,48,48,0.25); }
+
+/* MOBILE ADJUSTMENTS */
+@media (max-width:600px){
+  /* make modal height friendly to keyboard and ensure body can scroll */
+  #freight-popup{ max-width:94%; max-height:calc(100vh - 40px); padding-bottom:0; }
+
+  /* add extra scroll padding so final inputs aren't hidden under footer */
+  #freight-popup-body{ padding-bottom:130px; } /* ensures scrollable room above footer */
+
+  /* fix footer to viewport bottom so it stays visible above keyboard */
+  #freight-popup-footer{
+    position:fixed;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom, 8px));
+    width:calc(100% - 32px);
+    max-width:560px;
+    box-shadow:0 -8px 30px rgba(0,0,0,0.12);
+    background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
+    padding:12px;
+    border-radius:12px 12px 8px 8px;
+    z-index:100000;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  /* full-width stack buttons for easy tapping */
+  #freight-popup-footer .btn{ width:100%; padding:14px; font-size:16px; border-radius:10px; }
+
+  /* when keyboard is open we nudge the footer a little higher via JS toggled class */
+  html.keyboard-open #freight-popup-footer{
+    bottom: calc(env(safe-area-inset-bottom, 8px) + 8px);
+  }
+}
+
+/* small visual tweak */
+#freight-popup-backdrop.show{ align-items:flex-start; padding-top:28px; }
+
+/* pretty reset for inputs inside modal */
+#freight-popup input:-webkit-autofill { box-shadow: 0 0 0 1000px #fff inset !important; -webkit-text-fill-color:var(--text) !important; }
+</style>
+
+<!-- HTML -->
+<div id="freight-popup-backdrop" aria-hidden="true">
+  <div id="freight-popup">
+
+    <div id="freight-popup-header">
+      <h3>Contact for Freight</h3>
+      <button id="freight-popup-close" aria-label="Close">&times;</button>
+    </div>
+
+    <div id="freight-success-bar" role="status" aria-live="polite"></div>
+
+    <div id="freight-popup-body">
+      <div class="freight-product">
+        {% if product and product.featured_image %}
+          <img src="{{ product.featured_image | img_url: '200x200' }}" alt="{{ product.title }}">
+        {% endif %}
+        <div>{{ product.title }}</div>
+      </div>
+
+      <!-- novalidate prevents browser native tooltip -->
+      <form id="freight-form" novalidate>
+        <label for="freight_name">Full name *</label>
+        <input id="freight_name" name="full_name" autocomplete="name">
+        <div class="freight-error" id="err_name"></div>
+
+        <label for="freight_email">Email *</label>
+        <input id="freight_email" type="email" name="email" autocomplete="email">
+        <div class="freight-error" id="err_email"></div>
+
+        <label for="freight_phone">Phone</label>
+        <input id="freight_phone" name="phone" autocomplete="tel">
+        <div class="freight-error" id="err_phone"></div>
+
+        <label for="freight_address">Address</label>
+        <textarea id="freight_address" name="address" rows="2" autocomplete="street-address"></textarea>
+        <div class="freight-error" id="err_address"></div>
+
+        <label for="freight_instructions">Delivery instructions (optional)</label>
+        <textarea id="freight_instructions" name="instructions" rows="2"></textarea>
+      </form>
+    </div>
+
+    <div id="freight-popup-footer" aria-hidden="false">
+      <button class="btn btn-cancel" id="freight-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="freight-submit" type="submit" form="freight-form">Submit Request</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  const trigger = document.querySelector('[data-freight="true"]');
+  const backdrop = document.getElementById("freight-popup-backdrop");
+  const popup = document.getElementById("freight-popup");
+  const closeBtn = document.getElementById("freight-popup-close");
+  const cancelBtn = document.getElementById("freight-cancel");
+  const form = document.getElementById("freight-form");
+  const successBar = document.getElementById("freight-success-bar");
+  const inputs = Array.from(form.querySelectorAll("input, textarea"));
+
+  /* ------------------------------
+      POPUP OPEN / CLOSE
+  ------------------------------- */
+
+  function openPopup(){
+    backdrop.classList.add("show");
+    document.body.style.overflow = "hidden";
+    setTimeout(()=> popup.scrollIntoView({ block: "center", behavior: "smooth" }), 120);
+  }
+
+  function closePopup(){
+    backdrop.classList.remove("show");
+    document.body.style.overflow = "";
+    successBar.style.display = "none";
+    form.reset();
+  }
+
+  if(trigger) trigger.addEventListener("click", e => { e.preventDefault(); openPopup(); });
+  closeBtn.addEventListener("click", closePopup);
+  cancelBtn.addEventListener("click", closePopup);
+  backdrop.addEventListener("click", e => { if(e.target===backdrop) closePopup(); });
+  document.addEventListener("keydown", e => { if(e.key==="Escape") closePopup(); });
+
+  // Mobile keyboard fix
+  inputs.forEach(inp=>{
+    inp.addEventListener("focus", ()=> document.documentElement.classList.add("keyboard-open"));
+    inp.addEventListener("blur", ()=> setTimeout(()=> document.documentElement.classList.remove("keyboard-open"), 250));
+  });
+
+  /* ------------------------------
+        FORM SUBMIT HANDLER
+  ------------------------------- */
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    let valid = true;
+
+    // Reset errors
+    document.querySelectorAll(".freight-error").forEach(el=>{ el.style.display="none"; el.textContent=""; });
+    document.querySelectorAll("#freight-form input, #freight-form textarea").forEach(el=> el.classList.remove("error"));
+
+    const name = document.getElementById("freight_name");
+    const email = document.getElementById("freight_email");
+    const phone = document.getElementById("freight_phone");
+    const address = document.getElementById("freight_address");
+    const instructions = document.getElementById("freight_instructions");
+
+    // 🔹 Dynamically fetch product title
+    const productDiv = popup.querySelector(".freight-product div");
+    const productTitle = productDiv ? productDiv.textContent.trim() : "";
+
+    /* ----- VALIDATION ----- */
+    if(!name.value.trim()){
+      document.getElementById("err_name").textContent = "Full name is required.";
+      document.getElementById("err_name").style.display = "block";
+      name.classList.add("error");
+      valid = false;
+    }
+
+    const emailVal = email.value.trim();
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if(!emailVal){
+      document.getElementById("err_email").textContent = "Email is required.";
+      document.getElementById("err_email").style.display = "block";
+      email.classList.add("error");
+      valid = false;
+    } else if(!emailRegex.test(emailVal)){
+      document.getElementById("err_email").textContent = "Enter a valid email.";
+      document.getElementById("err_email").style.display = "block";
+      email.classList.add("error");
+      valid = false;
+    }
+
+    if(!valid){
+      const firstErr = document.querySelector(".freight-error[style*='display: block']");
+      if(firstErr) firstErr.previousElementSibling.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+
+    /* -----------------------------------------------
+       SHOW SUCCESS (INSTANT FEEDBACK)
+    ------------------------------------------------ */
+    successBar.innerHTML = "<strong>✓ Request received</strong> We will contact you shortly.";
+    successBar.style.display = "block";
+
+    /* -----------------------------------------------
+       SEND DATA TO GOOGLE SHEETS
+    ------------------------------------------------ */
+      // Get current product URL and main image
+    const productUrl = window.location.href;
+
+    const productImage = document.querySelector('meta[property="og:image"]')?.content ||
+                         document.querySelector('link[rel="image_src"]')?.href ||
+                         document.querySelector('.product-single__media img')?.src ||
+                         document.querySelector('.product__image img')?.src ||
+                         "";
+
+    const payload = {
+      full_name: name.value.trim(),
+      email: email.value.trim(),
+      phone: phone.value.trim(),
+      address: address.value.trim(),
+      instructions: instructions.value.trim(),
+      product_title: productTitle,
+      product_url: productUrl,         // NEW – exact page link
+      product_image: productImage      // NEW – main product photo
+    };
+
+     // END current product URL and main image
+    fetch("deploymentID add", {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => {
+      console.warn("Google Sheets submission error:", err);
+    });
+
+    /* -----------------------------------------------
+       CLOSE POPUP AFTER 3 SECONDS
+    ------------------------------------------------ */
+    setTimeout(closePopup, 3000);
+  });
+
+});
+</script>
