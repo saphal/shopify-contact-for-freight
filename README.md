@@ -211,13 +211,3 @@ shopify-contact-for-freight/
 ## License
 
 MIT — see [LICENSE](LICENSE)
-
----
-
-This README now has a **simple human tone**, Medium link, optional Upwork link, badges, folder structure, and clear sections for setup, usage, and testing.
-
-It is ready for a **top 1% GitHub repo presentation**.
-
----
-
-If you want, I can also **suggest a small hero GIF screenshot and folder tree image** to really make it stand out visually at the top of the repo. Do you want me to do that?
